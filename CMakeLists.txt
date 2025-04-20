@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.12...3.31)
-project(service_template CXX)
+cmake_minimum_required(VERSION 3.14)
+project(highload CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(DownloadUserver)
-
-find_package(userver COMPONENTS core postgresql QUIET)
+ 
+find_package(userver COMPONENTS core QUIET)
 if(NOT userver_FOUND)
   # Tries TRY_DIR first, falls back to downloading userver from GitHub using CPM.
   download_userver(TRY_DIR third_party/userver VERSION 2.8)
@@ -12,50 +12,34 @@ endif()
 
 userver_setup_environment()
 
-
-# Common sources
 add_library(${PROJECT_NAME}_objs OBJECT
-    src/hello.hpp
-    src/hello.cpp
+    src/say_hello.hpp
+    src/say_hello.cpp
+    src/hello_handler.hpp
+    src/hello_handler.cpp
 )
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
-
-
-# The Service
-add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_objs)
-
-
-# Unit Tests
-add_executable(${PROJECT_NAME}_unittest
-    src/hello_test.cpp
-)
-target_link_libraries(${PROJECT_NAME}_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
-add_google_tests(${PROJECT_NAME}_unittest)
-
-
-# Benchmarks
-add_executable(${PROJECT_NAME}_benchmark
-    src/hello_benchmark.cpp
-)
-target_link_libraries(${PROJECT_NAME}_benchmark PRIVATE ${PROJECT_NAME}_objs userver::ubench)
+target_link_libraries(${PROJECT_NAME}_objs userver::core)
+target_include_directories(${PROJECT_NAME}_objs PUBLIC src)
+# 
+ 
+# 
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_objs)
+# 
+ 
+# 
+add_executable(${PROJECT_NAME}-unittest unittests/say_hello_test.cpp)
+target_link_libraries(${PROJECT_NAME}-unittest ${PROJECT_NAME}_objs userver::utest)
+add_google_tests(${PROJECT_NAME}-unittest)
+# 
+ 
+# 
+add_executable(${PROJECT_NAME}_benchmark benchmarks/say_hello_bench.cpp)
+target_link_libraries(${PROJECT_NAME}_benchmark ${PROJECT_NAME}_objs userver::ubench)
 add_google_benchmark_tests(${PROJECT_NAME}_benchmark)
-
-
-# Functional Tests
+# 
+ 
+# 
+# Makes a virtualenv suitable for running pytests from `test` directory and integrates with `ctest`.
 userver_testsuite_add_simple()
-
-
-# Install
-include(GNUInstallDirs)
-
-if(DEFINED ENV{PREFIX})
-  message(STATUS "Set install prefix: $ENV{PREFIX}")
-  file(TO_CMAKE_PATH "$ENV{PREFIX}" PREFIX_PATH)
-  set(CMAKE_INSTALL_PREFIX ${PREFIX_PATH})
-endif()
-
-file(GLOB CONFIGS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/configs/*.yaml ${CMAKE_CURRENT_SOURCE_DIR}/configs/*.json)
-
-install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${PROJECT_NAME})
-install(FILES ${CONFIGS_FILES} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME} COMPONENT ${PROJECT_NAME})
+# 
