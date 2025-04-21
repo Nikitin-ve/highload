@@ -1,9 +1,0 @@
-worker-threads: 4
-worker-fs-threads: 1
-logger-level: debug
-
-is-testing: false
-
-server-port: 8080
-
-dbconnection: 'postgresql://highload_user:password@localhost:5432/highload_db_1'
