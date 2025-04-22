@@ -288,9 +288,9 @@ KeyValue::KeyValue(const components::ComponentConfig& config, const components::
 /// [Postgres service sample - HandleRequestThrow]
 std::string KeyValue::HandleRequest(server::http::HttpRequest& request, server::request::RequestContext&) const {
     // Добавляем CORS заголовки для всех ответов
-    request.GetHttpResponse().SetHeader("Access-Control-Allow-Origin", "*");
-    request.GetHttpResponse().SetHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    request.GetHttpResponse().SetHeader("Access-Control-Allow-Headers", "Content-Type, Origin, Accept");
+    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Origin"), static_cast<std::string>("*"));
+    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Methods"), static_cast<std::string>("GET, POST, DELETE, OPTIONS"));
+    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Headers"), static_cast<std::string>("Content-Type, Origin, Accept"));
     
     // Обработка предварительных запросов OPTIONS
     if (request.GetMethod() == server::http::HttpMethod::kOptions) {
