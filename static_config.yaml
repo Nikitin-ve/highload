@@ -7,6 +7,17 @@ components_manager:
             task_processor: main-task-processor  # Run it on CPU bound task processor
             method: GET,DELETE,POST,OPTIONS
 
+        http-handler-static:  # Обслуживает статические файлы фронтенда
+            fs-task-processor: fs-task-processor
+            path: /
+            method: GET,HEAD
+            task_processor: main-task-processor
+            file_path_prefix: frontend           # Папка со статическими файлами
+            fallback_file_path: frontend/index.html # Перенаправление всех запросов на index.html для SPA
+            static_files_cache_enabled: true    # Включаем кеширование статических файлов
+            static_files_cache_max_size: 100    # Максимальный размер кеша
+            static_files_cache_size_margin: 20  # Запас по размеру кеша
+
         postgres-schema-init: {}
             
         key-value-database:

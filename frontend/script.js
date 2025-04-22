@@ -9,7 +9,7 @@ document.getElementById('getButton').addEventListener('click', async function() 
     }
 
     try {
-        const response = await fetch(`http://158.160.175.39:8087/v1/key-value?key=${encodeURIComponent(key)}`, {
+        const response = await fetch(`/v1/key-value?key=${encodeURIComponent(key)}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -38,12 +38,12 @@ document.getElementById('postButton').addEventListener('click', async function()
     }
 
     try {
-        /*const response = await fetch('http://158.160.175.39:8087/v1/key-value', {
+        /*const response = await fetch('/v1/key-value', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value })
         });*/
-        const response = await fetch(`http://158.160.175.39:8087/v1/key-value?key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`, {
+        const response = await fetch(`/v1/key-value?key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -72,7 +72,7 @@ document.getElementById('deleteButton').addEventListener('click', async function
     }
 
     try {
-        const response = await fetch(`http://158.160.175.39:8087/v1/key-value?key=${encodeURIComponent(key)}`, {
+        const response = await fetch(`/v1/key-value?key=${encodeURIComponent(key)}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' }
         });

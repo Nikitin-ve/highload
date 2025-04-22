@@ -17,6 +17,7 @@
 #include <userver/fs/blocking/read.hpp>
 #include <userver/fs/blocking/file_descriptor.hpp>
 #include <userver/logging/log.hpp>
+#include <userver/server/handlers/http_handler_static.hpp>
 
 #include <filesystem>
 #include <regex>
@@ -284,6 +285,7 @@ int main(int argc, char* argv[]) {
                                     .Append<samples_postgres_service::pg::KeyValue>()
                                     .Append<components::Postgres>("key-value-database")
                                     .Append<samples_postgres_service::pg::PostgresSchemaInit>()
+                                    .Append<server::handlers::HttpHandlerStatic>()
                                     .Append<components::HttpClient>()
                                     .Append<components::TestsuiteSupport>()
                                     .Append<server::handlers::TestsControl>()
