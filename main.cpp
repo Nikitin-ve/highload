@@ -204,20 +204,25 @@ KeyValue::KeyValue(const components::ComponentConfig& config, const components::
 
 /// [Postgres service sample - HandleRequestThrow]
 std::string KeyValue::HandleRequest(server::http::HttpRequest& request, server::request::RequestContext&) const {
+    // Добавляем CORS заголовки для всех ответов
+    request.GetHttpResponse().SetHeader("Access-Control-Allow-Origin", "*");
+    request.GetHttpResponse().SetHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    request.GetHttpResponse().SetHeader("Access-Control-Allow-Headers", "Content-Type, Origin, Accept");
+    
+    // Обработка предварительных запросов OPTIONS
+    if (request.GetMethod() == server::http::HttpMethod::kOptions) {
+        request.SetResponseStatus(server::http::HttpStatus::kOk);
+        return {};
+    }
+    
     const auto& key = request.GetArg("key");
     if (key.empty()) {
         throw server::handlers::ClientError(server::handlers::ExternalBody{"No 'key' query argument"});
     }
 
     request.GetHttpResponse().SetContentType(http::content_type::kTextPlain);
-    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Origin"), static_cast<std::string>("*"));
-    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Methods"), static_cast<std::string>("GET,POST,DELETE,OPTIONS"));
-    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Headers"), static_cast<std::string>("*"));
-
+    
     switch (request.GetMethod()) {
-        case server::http::HttpMethod::kOptions:
-            request.SetResponseStatus(server::http::HttpStatus::kOk);
-            return "";
         case server::http::HttpMethod::kGet:
             return GetValue(key, request);
         case server::http::HttpMethod::kPost:

@@ -17,6 +17,8 @@ components_manager:
             static_files_cache_enabled: true    # Включаем кеширование статических файлов
             static_files_cache_max_size: 100    # Максимальный размер кеша
             static_files_cache_size_margin: 20  # Запас по размеру кеша
+            auto_index: false                   # Отключаем автоматический вывод содержимого директории
+            try_files: ["$uri", "$uri/", "/index.html"]  # Сначала ищем запрошенный файл, потом index.html
 
         postgres-schema-init: {}
             
