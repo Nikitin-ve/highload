@@ -13,10 +13,166 @@
 
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/components/component_base.hpp>
+#include <userver/fs/blocking/read.hpp>
+#include <userver/fs/blocking/file_descriptor.hpp>
+#include <userver/logging/log.hpp>
+
+#include <filesystem>
+#include <regex>
+#include <string>
+#include <vector>
+#include <algorithm>
 
 #include <samples_postgres_service/sql_queries.hpp>
 
 namespace samples_postgres_service::pg {
+
+// Структура для хранения информации о миграции
+struct Migration {
+    std::string version;
+    std::string filename;
+    std::string sql;
+};
+
+// Компонент для инициализации схемы базы данных
+class PostgresSchemaInit final : public components::ComponentBase {
+public:
+    // Имя компонента для использования в конфигурации
+    static constexpr std::string_view kName = "postgres-schema-init";
+
+    // Конструктор компонента
+    PostgresSchemaInit(const components::ComponentConfig& config,
+                      const components::ComponentContext& context);
+
+private:
+    // Метод для применения миграций
+    void ApplyMigrations();
+    
+    // Метод для загрузки миграций из файлов
+    std::vector<Migration> LoadMigrations(const std::string& migrations_dir);
+    
+    // Метод для чтения SQL-кода из файла
+    std::string ReadSqlFile(const std::string& filepath);
+
+    // Кластер PostgreSQL
+    storages::postgres::ClusterPtr pg_cluster_;
+};
+
+PostgresSchemaInit::PostgresSchemaInit(const components::ComponentConfig& config,
+                                      const components::ComponentContext& context)
+    : ComponentBase(config, context),
+      pg_cluster_(context.FindComponent<components::Postgres>("key-value-database").GetCluster()) {
+    ApplyMigrations();
+}
+
+std::string PostgresSchemaInit::ReadSqlFile(const std::string& filepath) {
+    try {
+        return fs::blocking::ReadFileContents(filepath);
+    } catch (const std::exception& ex) {
+        LOG_ERROR() << "Не удалось прочитать файл миграции: " << filepath
+                  << ", ошибка: " << ex.what();
+        throw;
+    }
+}
+
+std::vector<Migration> PostgresSchemaInit::LoadMigrations(const std::string& migrations_dir) {
+    std::vector<Migration> migrations;
+    
+    // Проверяем существование директории
+    if (!std::filesystem::exists(migrations_dir)) {
+        LOG_WARNING() << "Директория миграций не найдена: " << migrations_dir;
+        return migrations;
+    }
+    
+    // Регулярное выражение для извлечения версии миграции из имени файла
+    std::regex version_regex("^(\\d+)_.*\\.sql$");
+    
+    // Перебираем все файлы в директории
+    for (const auto& entry : std::filesystem::directory_iterator(migrations_dir)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".sql") {
+            continue;
+        }
+        
+        std::string filename = entry.path().filename().string();
+        std::smatch match;
+        
+        // Проверяем, соответствует ли имя файла формату NNN_description.sql
+        if (std::regex_match(filename, match, version_regex)) {
+            Migration migration;
+            migration.version = match[1].str();  // Извлекаем номер версии
+            migration.filename = filename;
+            migration.sql = ReadSqlFile(entry.path().string());
+            
+            migrations.push_back(migration);
+        } else {
+            LOG_WARNING() << "Пропущен файл с неправильным форматом имени: " << filename;
+        }
+    }
+    
+    // Сортируем миграции по номеру версии
+    std::sort(migrations.begin(), migrations.end(),
+              [](const Migration& a, const Migration& b) {
+                  return a.version < b.version;
+              });
+    
+    return migrations;
+}
+
+void PostgresSchemaInit::ApplyMigrations() {
+    // Создаем таблицу для отслеживания миграций
+    pg_cluster_->Execute(
+        storages::postgres::ClusterHostType::kMaster,
+        "CREATE TABLE IF NOT EXISTS schema_migrations ("
+        "    version VARCHAR PRIMARY KEY,"
+        "    applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        ")");
+    
+    // Путь к директории с миграциями
+    const std::string migrations_dir = "schemas/postgresql/migrations";
+    
+    // Загружаем миграции из файлов
+    auto migrations = LoadMigrations(migrations_dir);
+    
+    LOG_INFO() << "Найдено " << migrations.size() << " файлов миграций";
+    
+    // Применяем каждую миграцию
+    for (const auto& migration : migrations) {
+        // Проверяем, применена ли уже миграция
+        auto res = pg_cluster_->Execute(
+            storages::postgres::ClusterHostType::kMaster,
+            "SELECT 1 FROM schema_migrations WHERE version = $1",
+            migration.version);
+        
+        if (res.IsEmpty()) {
+            LOG_INFO() << "Применение миграции " << migration.version 
+                     << " (" << migration.filename << ")";
+            
+            try {
+                // Выполняем SQL из файла миграции
+                pg_cluster_->Execute(
+                    storages::postgres::ClusterHostType::kMaster,
+                    migration.sql);
+                
+                // Записываем информацию о применённой миграции
+                pg_cluster_->Execute(
+                    storages::postgres::ClusterHostType::kMaster,
+                    "INSERT INTO schema_migrations (version) VALUES ($1)",
+                    migration.version);
+                
+                LOG_INFO() << "Миграция " << migration.version << " успешно применена";
+            } catch (const std::exception& ex) {
+                LOG_ERROR() << "Ошибка при применении миграции " << migration.version
+                          << ": " << ex.what();
+                throw;
+            }
+        } else {
+            LOG_DEBUG() << "Миграция " << migration.version << " уже применена";
+        }
+    }
+    
+    LOG_INFO() << "Все миграции применены";
+}
 
 class KeyValue final : public server::handlers::HttpHandlerBase {
 public:
@@ -27,7 +183,6 @@ public:
     std::string HandleRequest(server::http::HttpRequest& request, server::request::RequestContext&) const override;
 
 private:
-    void CreateSchemaOnce();
     std::string GetValue(std::string_view key, const server::http::HttpRequest& request) const;
     std::string PostValue(std::string_view key, const server::http::HttpRequest& request) const;
     std::string DeleteValue(std::string_view key) const;
@@ -43,9 +198,7 @@ namespace samples_postgres_service::pg {
 /// [Postgres service sample - component constructor]
 KeyValue::KeyValue(const components::ComponentConfig& config, const components::ComponentContext& context)
     : HttpHandlerBase(config, context),
-      pg_cluster_(context.FindComponent<components::Postgres>("key-value-database").GetCluster()) {
-        CreateSchemaOnce();
-      }
+      pg_cluster_(context.FindComponent<components::Postgres>("key-value-database").GetCluster()) {}
 /// [Postgres service sample - component constructor]
 
 /// [Postgres service sample - HandleRequestThrow]
@@ -69,10 +222,6 @@ std::string KeyValue::HandleRequest(server::http::HttpRequest& request, server::
     }
 }
 /// [Postgres service sample - HandleRequestThrow]
-
-void KeyValue::CreateSchemaOnce() {
-    storages::postgres::ResultSet res = pg_cluster_->Execute(storages::postgres::ClusterHostType::kMaster, userver::storages::postgres::Query{R"( CREATE TABLE IF NOT EXISTS key_value_table ( key VARCHAR PRIMARY KEY, value VARCHAR ) )"});
-}
 
 /// [Postgres service sample - GetValue]
 std::string KeyValue::GetValue(std::string_view key, const server::http::HttpRequest& request) const {
@@ -127,6 +276,7 @@ int main(int argc, char* argv[]) {
     const auto component_list = components::MinimalServerComponentList()
                                     .Append<samples_postgres_service::pg::KeyValue>()
                                     .Append<components::Postgres>("key-value-database")
+                                    .Append<samples_postgres_service::pg::PostgresSchemaInit>()
                                     .Append<components::HttpClient>()
                                     .Append<components::TestsuiteSupport>()
                                     .Append<server::handlers::TestsControl>()
