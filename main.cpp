@@ -209,11 +209,14 @@ std::string KeyValue::HandleRequest(server::http::HttpRequest& request, server::
     }
 
     request.GetHttpResponse().SetContentType(http::content_type::kTextPlain);
-    request.GetHttpResponse().SetResponseHeader("Access-Control-Allow-Origin", "*");
-    request.GetHttpResponse().SetResponseHeader("Access-Control-Allow-Methods", "GET,POST,DELETE");
-    request.GetHttpResponse().SetResponseHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Origin"), static_cast<std::string>("*"));
+    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Methods"), static_cast<std::string>("GET,POST,DELETE,OPTIONS"));
+    request.GetHttpResponse().SetHeader(static_cast<std::string>("Access-Control-Allow-Headers"), static_cast<std::string>("*"));
 
     switch (request.GetMethod()) {
+        case server::http::HttpMethod::kOptions:
+            request.SetResponseStatus(server::http::HttpStatus::kOk);
+            return "";
         case server::http::HttpMethod::kGet:
             return GetValue(key, request);
         case server::http::HttpMethod::kPost:
