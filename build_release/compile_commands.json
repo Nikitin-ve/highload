@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/niki-ve/highload/build_release",
+  "command": "/usr/bin/c++ -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_CHRONO_DYN_LINK -DBOOST_LOCALE_DYN_LINK -DBOOST_STACKTRACE_BACKTRACE_DYN_LINK -DBOOST_STACKTRACE_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK -DFMT_LOCALE -DFMT_SHARED -DMOODYCAMEL_NO_THREAD_LOCAL -DNDEBUG -DPIC=1 -DUSERVER=1 -DUSERVER_NAMESPACE=userver -DUSERVER_NAMESPACE_BEGIN=\"namespace userver { inline namespace v2_7_rc { \" -DUSERVER_NAMESPACE_END=\"} }\" -D_FORTIFY_SOURCE=2 -I/home/niki-ve/highload/build_release/include -isystem /usr/include/userver/third_party -O3 -DNDEBUG -fvisibility-inlines-hidden -pipe -g -gz -fPIC -fdata-sections -ffunction-sections -mcx16 -Wall -Wextra -Wpedantic -ftemplate-backtrace-limit=0 -Wdisabled-optimization -Winvalid-pch -Wimplicit-fallthrough -Wlogical-op -Wformat=2 -Wno-error=deprecated-declarations -Wno-useless-cast -Wno-gnu-zero-variadic-macro-arguments -fmacro-prefix-map=/app/userver/build_release/= -fmacro-prefix-map=/app/= -std=c++17 -o CMakeFiles/highload_sql.dir/src/samples_postgres_service/sql_queries.cpp.o -c /home/niki-ve/highload/build_release/src/samples_postgres_service/sql_queries.cpp",
+  "file": "/home/niki-ve/highload/build_release/src/samples_postgres_service/sql_queries.cpp"
+},
+{
+  "directory": "/home/niki-ve/highload/build_release",
+  "command": "/usr/bin/c++ -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_CHRONO_DYN_LINK -DBOOST_LOCALE_DYN_LINK -DBOOST_STACKTRACE_BACKTRACE_DYN_LINK -DBOOST_STACKTRACE_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK -DFMT_LOCALE -DFMT_SHARED -DMOODYCAMEL_NO_THREAD_LOCAL -DNDEBUG -DPIC=1 -DUSERVER=1 -DUSERVER_NAMESPACE=userver -DUSERVER_NAMESPACE_BEGIN=\"namespace userver { inline namespace v2_7_rc { \" -DUSERVER_NAMESPACE_END=\"} }\" -D_FORTIFY_SOURCE=2 -I/home/niki-ve/highload/build_release/include -isystem /usr/include/userver/third_party -O3 -DNDEBUG -fvisibility-inlines-hidden -pipe -g -gz -fPIC -fdata-sections -ffunction-sections -mcx16 -Wall -Wextra -Wpedantic -ftemplate-backtrace-limit=0 -Wdisabled-optimization -Winvalid-pch -Wimplicit-fallthrough -Wlogical-op -Wformat=2 -Wno-error=deprecated-declarations -Wno-useless-cast -Wno-gnu-zero-variadic-macro-arguments -fmacro-prefix-map=/app/userver/build_release/= -fmacro-prefix-map=/app/= -std=c++17 -o CMakeFiles/highload.dir/main.cpp.o -c /home/niki-ve/highload/main.cpp",
+  "file": "/home/niki-ve/highload/main.cpp"
+}
+]

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libhighload_sql.a CMakeFiles/highload_sql.dir/src/samples_postgres_service/sql_queries.cpp.o
+/usr/bin/ranlib libhighload_sql.a
