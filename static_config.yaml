@@ -8,7 +8,6 @@ components_manager:
             method: GET,DELETE,POST,OPTIONS
 
         handler-static:  # Обслуживает статические файлы фронтенда
-            fs-task-processor: fs-task-processor
             path: /
             method: GET,HEAD
             task_processor: main-task-processor
