@@ -7,7 +7,7 @@ components_manager:
             task_processor: main-task-processor  # Run it on CPU bound task processor
             method: GET,DELETE,POST,OPTIONS
 
-        handler-static-files:  # Обслуживает статические файлы фронтенда
+        handler-static:  # Обслуживает статические файлы фронтенда
             fs-task-processor: fs-task-processor
             path: /
             method: GET,HEAD

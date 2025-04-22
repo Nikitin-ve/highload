@@ -18,7 +18,9 @@
 #include <userver/fs/blocking/file_descriptor.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/server/handlers/http_handler_static.hpp>
+#include <userver/http/content_type.hpp>
 
+#include <iostream>
 #include <filesystem>
 #include <regex>
 #include <string>
@@ -28,6 +30,87 @@
 #include <samples_postgres_service/sql_queries.hpp>
 
 namespace samples_postgres_service::pg {
+
+// Компонент для обслуживания статических файлов
+class StaticFilesHandler final : public server::handlers::HttpHandlerBase {
+public:
+    static constexpr std::string_view kName = "handler-static";
+
+    StaticFilesHandler(const components::ComponentConfig& config,
+                      const components::ComponentContext& context)
+        : HttpHandlerBase(config, context),
+          file_path_prefix_(config["file_path_prefix"].As<std::string>()),
+          fallback_file_path_(config["fallback_file_path"].As<std::string>("")) {}
+
+    std::string HandleRequestThrow(
+        const server::http::HttpRequest& request,
+        server::request::RequestContext&) const override {
+        
+        const auto& path = request.GetRequestPath();
+        
+        // Проверяем, существует ли запрошенный файл
+        std::string file_path = file_path_prefix_ + path;
+        
+        if (path == "/" || path.empty()) {
+            file_path = file_path_prefix_ + "/index.html";
+        }
+        
+        try {
+            if (std::filesystem::exists(file_path) && 
+                !std::filesystem::is_directory(file_path)) {
+                return ServeFile(file_path, request);
+            }
+            
+            // Если файл не найден и указан fallback_path, возвращаем его
+            if (!fallback_file_path_.empty() && 
+                std::filesystem::exists(fallback_file_path_)) {
+                return ServeFile(fallback_file_path_, request);
+            }
+        } catch (const std::exception& ex) {
+            LOG_ERROR() << "Error serving static file: " << ex.what();
+        }
+        
+        // Если файл не найден и нет fallback, возвращаем 404
+        request.SetResponseStatus(server::http::HttpStatus::kNotFound);
+        return "File not found";
+    }
+
+private:
+    std::string ServeFile(const std::string& file_path,
+                         const server::http::HttpRequest& request) const {
+        // Определяем Content-Type на основе расширения
+        auto content_type = DetermineContentType(file_path);
+        request.GetHttpResponse().SetContentType(content_type);
+        
+        // Возвращаем содержимое файла
+        return fs::blocking::ReadFileContents(file_path);
+    }
+    
+    std::string DetermineContentType(const std::string& file_path) const {
+        static const std::unordered_map<std::string, std::string> content_types = {
+            {".html", http::content_type::kTextHtml},
+            {".css", http::content_type::kTextCss},
+            {".js", http::content_type::kApplicationJavascript},
+            {".json", http::content_type::kApplicationJson},
+            {".png", http::content_type::kImagePng},
+            {".jpg", http::content_type::kImageJpeg},
+            {".jpeg", http::content_type::kImageJpeg},
+            {".svg", http::content_type::kImageSvg},
+            {".ico", "image/x-icon"}
+        };
+        
+        std::string extension = std::filesystem::path(file_path).extension().string();
+        auto it = content_types.find(extension);
+        if (it != content_types.end()) {
+            return it->second;
+        }
+        
+        return http::content_type::kTextPlain;
+    }
+    
+    std::string file_path_prefix_;
+    std::string fallback_file_path_;
+};
 
 // Структура для хранения информации о миграции
 struct Migration {
@@ -290,7 +373,7 @@ int main(int argc, char* argv[]) {
                                     .Append<samples_postgres_service::pg::KeyValue>()
                                     .Append<components::Postgres>("key-value-database")
                                     .Append<samples_postgres_service::pg::PostgresSchemaInit>()
-                                    .Append<server::handlers::HttpHandlerStatic>()
+                                    .Append<samples_postgres_service::pg::StaticFilesHandler>()
                                     .Append<components::HttpClient>()
                                     .Append<components::TestsuiteSupport>()
                                     .Append<server::handlers::TestsControl>()
